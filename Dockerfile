@@ -1,4 +1,4 @@
-FROM python:3.11.7-alpine3.17
+FROM python:3.11-slim-buster
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -15,4 +15,6 @@ RUN poetry export --without-hashes --format requirements.txt --output requiremen
 RUN pip install -r requirements.txt
 
 COPY . /app/
-ENTRYPOINT ["python", "./main.py"]
+
+RUN chmod +x entrypoint.sh
+ENTRYPOINT ["/app/entrypoint.sh"]
