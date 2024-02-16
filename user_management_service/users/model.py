@@ -1,3 +1,4 @@
+import datetime
 import enum
 import uuid
 
@@ -30,8 +31,8 @@ class User(Base):
     group_id = sa.Column(sa.UUID, ForeignKey("roles.id"))
     image = sa.Column(sa.String)
     is_blocked = sa.Column(sa.Boolean, default=False)
-    created_at = sa.Column(sa.DateTime)
-    modified_at = sa.Column(sa.DateTime)
+    created_at = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
+    modified_at = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
 
 
 class Group(Base):
