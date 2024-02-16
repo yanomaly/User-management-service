@@ -76,7 +76,7 @@ target/
 celerybeat-schedule
 
 # dotenv
-.env
+user_management_service/.env
 
 # virtualenv
 venv/
