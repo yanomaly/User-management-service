@@ -20,7 +20,7 @@ class User(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = sa.Column(sa.String, nullable=False)
-    surname = sa.Column(sa.String, nullable=False)
+    surname = sa.Column(sa.String, nullable=False, index=True)
     username = sa.Column(sa.String, nullable=False, unique=True)
     password = sa.Column(sa.String, nullable=False)
     prone_number = sa.Column(sa.String)
