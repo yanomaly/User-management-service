@@ -1,11 +1,15 @@
 import uvicorn
+from auth.router import auth_router
+from config import Settings
 from fastapi import FastAPI
-
-from user_management_service.router import health_check_router
+from router import health_check_router
 
 app = FastAPI()
 
 app.include_router(health_check_router)
+app.include_router(auth_router)
+
+settings = Settings()
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host=settings.APP_HOST, port=settings.APP_PORT, reload=True)

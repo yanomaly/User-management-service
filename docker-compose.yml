@@ -13,3 +13,12 @@ services:
       - user_management_service/.env
     ports:
       - "5432:5432"
+
+  redis:
+    container_name: tokens-black-list-db
+    image: redis:7.2.0-alpine3.18
+    restart: on-failure
+    env_file:
+      - user_management_service/.env
+    ports:
+      - "6379:6379"
