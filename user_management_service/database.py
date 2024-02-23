@@ -1,7 +1,6 @@
+from config import Settings
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
-
-from user_management_service.config import Settings
 
 settings = Settings()
 
