@@ -23,6 +23,8 @@ aioboto3 = "12.3.0"
 pre-commit = "3.6.1"
 pydantic-settings = "2.1.0"
 alembic = "1.13.1"
+passlib = "1.7.4"
+bcrypt = "4.1.2"
 
 
 [build-system]
