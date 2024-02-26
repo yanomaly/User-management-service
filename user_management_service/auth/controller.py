@@ -13,11 +13,7 @@ from .tokens import decode_token, encode_tokens
 
 
 def generate_new_tokens(token: str, user: Optional[User]):
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    if user.is_blocked:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    if check_if_blacklisted(str(user.id), token):
+    if not user or user.is_blocked or check_if_blacklisted(str(user.id), token):
         raise HTTPException(status_code=401, detail="Invalid token")
     add_to_blacklist(str(user.id), token)
     return encode_tokens(str(user.id))

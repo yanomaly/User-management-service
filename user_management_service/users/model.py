@@ -8,7 +8,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from user_management_service.database import Base
+from database import Base
 
 
 class Role(enum.Enum):
