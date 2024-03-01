@@ -58,5 +58,6 @@ class OrderEnum(Enum):
 class Pagination(BaseModel):
     page: int = Field(default=1, ge=1, le=500000)
     per_page: int = Field(default=2, ge=1, le=1000)
+    filter_by_surname: str
     order: OrderEnum = OrderEnum.DESC
-    sort_by: str = "id"
+    order_by: str = "id"
