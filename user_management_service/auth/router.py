@@ -1,3 +1,4 @@
+from dependencies import get_session
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.exc import IntegrityError
@@ -8,21 +9,18 @@ from starlette.responses import JSONResponse
 from .controller import (
     authenticate_user,
     create_user,
-    find_user,
+    find_user_db,
     generate_new_tokens,
     validate_connection,
 )
-from .dependencies import get_session, http_bearer
+from .dependencies import http_bearer
 from .schemas import LogInForm, SignUpForm
 
 auth_router = APIRouter(prefix="/auth")
 
 
 @auth_router.post("/signup")
-async def signup(
-        data: SignUpForm,
-        session: AsyncSession = Depends(get_session)
-):
+async def signup(data: SignUpForm, session: AsyncSession = Depends(get_session)):
     try:
         user = await create_user(data, session)
     except IntegrityError:
@@ -45,11 +43,8 @@ async def signup(
 
 
 @auth_router.post("/login")
-async def login(
-        data: LogInForm,
-        session: AsyncSession = Depends(get_session)
-):
-    user = await find_user(data.identifier_type, data.identifier, session)
+async def login(data: LogInForm, session: AsyncSession = Depends(get_session)):
+    user = await find_user_db(data.identifier_type, data.identifier, session)
     access_token, refresh_token = authenticate_user(
         data.password.get_secret_value(), user
     )
