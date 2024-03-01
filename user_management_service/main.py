@@ -3,11 +3,13 @@ from auth.router import auth_router
 from config import Settings
 from fastapi import FastAPI
 from router import health_check_router
+from users.router import user_router
 
 app = FastAPI()
 
 app.include_router(health_check_router)
 app.include_router(auth_router)
+app.include_router(user_router)
 
 settings = Settings()
 
