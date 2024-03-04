@@ -1,5 +1,6 @@
 import re
 
+import schemas
 from pydantic import (
     BaseModel,
     SecretStr,
@@ -7,40 +8,18 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from schemas import UserBaseModel
 
-name_surname_regexp = r"^([А-Я][а-яё]{1,23}|[A-Z][a-z]{1,23})$"
-username_regexp = r"[-_A-Za-z0-9]{1,19}$"
-password_regexp = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!_%*?&])[A-Za-z\d@$!_%*?&]{8,}$"
-email_regexp = r"^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$"
-phone_regexp = r"^(\+375)(29|25|44|33)(\d{7})$"
+password_regexp = (
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!_%*?&])[A-Za-z\d@$!_%*?&]{8,}$"
+)
 
 
-class SignUpForm(BaseModel):
-    name: str
-    surname: str
-    username: str
-    email: str
-    phone_number: str
+class SignUpForm(UserBaseModel):
     # password must contain at least eight characters,
     # at least one number and both lower and uppercase letters and special characters
     password: SecretStr
     password_repeat: SecretStr
-
-    @field_validator("name", "surname")
-    @classmethod
-    def name_surname_val(cls, value: str, info: ValidationInfo):
-        name_surname_pattern = re.compile(name_surname_regexp)
-        if not re.match(name_surname_pattern, value):
-            raise ValueError(f"This {info.field_name} format is not supported")
-        return value
-
-    @field_validator("username")
-    @classmethod
-    def username_val(cls, value: str):
-        username_pattern = re.compile(username_regexp)
-        if not re.match(username_pattern, value):
-            raise ValueError("This username format is not supported")
-        return value
 
     @field_validator("password")
     @classmethod
@@ -65,26 +44,10 @@ class SignUpForm(BaseModel):
             raise ValueError("Passwords do not match")
         return self
 
-    @field_validator("email")
-    @classmethod
-    def email_val(cls, value: str):
-        email_pattern = re.compile(email_regexp)
-        if not re.match(email_pattern, value):
-            raise ValueError("This email format is not supported")
-        return value
-
-    @field_validator("phone_number")
-    @classmethod
-    def phone_val(cls, value: str):
-        phone_pattern = re.compile(phone_regexp)
-        if not re.match(phone_pattern, value):
-            raise ValueError("This phone format is not supported")
-        return value
-
 
 class LogInForm(BaseModel):
     identifier: str
-    identifier_type: str
+    identifier_type: str = "id"
     password: SecretStr
 
     @field_validator("identifier_type")
@@ -92,9 +55,9 @@ class LogInForm(BaseModel):
     def validate_one_field_using_the_others(cls, value: str, info: ValidationInfo):
         identifier = info.data["identifier"]
 
-        phone_pattern = re.compile(phone_regexp)
-        email_pattern = re.compile(email_regexp)
-        username_pattern = re.compile(username_regexp)
+        phone_pattern = re.compile(schemas.phone_regexp)
+        email_pattern = re.compile(schemas.email_regexp)
+        username_pattern = re.compile(schemas.username_regexp)
 
         if re.match(phone_pattern, identifier):
             value = "phone_number"

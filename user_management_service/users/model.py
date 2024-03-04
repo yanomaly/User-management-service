@@ -4,17 +4,16 @@ import uuid
 from dataclasses import dataclass
 
 import sqlalchemy as sa
+from database import Base
 from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from database import Base
-
 
 class Role(enum.Enum):
-    ADMIN = "admin"
     USER = "user"
     MODERATOR = "moderator"
+    ADMIN = "admin"
 
 
 @dataclass

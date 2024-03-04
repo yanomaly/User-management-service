@@ -3,8 +3,8 @@ from typing import Optional
 from fastapi import HTTPException
 from jwt import InvalidTokenError
 from passlib.context import CryptContext
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from users.controller import find_user_db
 from users.model import Role, User
 
 from .dependencies import redis_client
@@ -32,15 +32,12 @@ def add_to_blacklist(user_id: str, token: str):
 
 async def validate_connection(token: str, token_type: str, session: AsyncSession):
     try:
-        user = await find_user("id", decode_token(token, token_type), session)
+        user = await find_user_db("id", decode_token(token, token_type), session)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid token")
     except InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
-
-
-async def find_user(identifier_type: str, identifier: str, session: AsyncSession):
-    query = select(User).where((getattr(User, identifier_type) == identifier))
-    return (await session.execute(query)).scalars().first()
 
 
 def authenticate_user(form_password: str, user: Optional[User]):
