@@ -4,7 +4,7 @@ from enum import Enum
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core.core_schema import ValidationInfo
 
-name_surname_regexp = r"^([А-Я][а-яё]{1,23}|[A-Z][a-z]{1,23})$"
+name_surname_regexp = r"^[A-Z][a-z]{1,23}$"
 username_regexp = r"[-_A-Za-z0-9]{1,19}$"
 email_regexp = r"^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$"
 phone_regexp = r"^(\+375)(29|25|44|33)(\d{7})$"
