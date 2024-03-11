@@ -1,18 +1,15 @@
 import re
+from enum import Enum
+from typing import Annotated, Any, Optional
 
-import schemas
-from pydantic import (
-    BaseModel,
-    SecretStr,
-    ValidationInfo,
-    field_validator,
-    model_validator,
-)
-from schemas import UserBaseModel
+from domain.base import UserBaseModel, email_regexp, phone_regexp, username_regexp
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
+from pydantic_core.core_schema import ValidationInfo
 
 password_regexp = (
     r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!_%*?&])[A-Za-z\d@$!_%*?&]{8,}$"
 )
+token_regexp = r"(^[\w=-]{32,}\.[\w=-]{32,}\.[\w=-]{32,}$)"
 
 
 class SignUpForm(UserBaseModel):
@@ -47,7 +44,7 @@ class SignUpForm(UserBaseModel):
 
 class LogInForm(BaseModel):
     identifier: str
-    identifier_type: str = "id"
+    identifier_type: Annotated[Optional[str], Field(validate_default=True)] = None
     password: SecretStr
 
     @field_validator("identifier_type")
@@ -55,9 +52,9 @@ class LogInForm(BaseModel):
     def validate_one_field_using_the_others(cls, value: str, info: ValidationInfo):
         identifier = info.data["identifier"]
 
-        phone_pattern = re.compile(schemas.phone_regexp)
-        email_pattern = re.compile(schemas.email_regexp)
-        username_pattern = re.compile(schemas.username_regexp)
+        phone_pattern = re.compile(phone_regexp)
+        email_pattern = re.compile(email_regexp)
+        username_pattern = re.compile(username_regexp)
 
         if re.match(phone_pattern, identifier):
             value = "phone_number"
@@ -69,3 +66,26 @@ class LogInForm(BaseModel):
             raise ValueError("Username, phone number or email isn't correct")
 
         return value
+
+
+class TokenTypeEnum(Enum):
+    access = "access"
+    refresh = "refresh"
+
+
+class JwtTokenForm(BaseModel):
+    token: str
+    type: TokenTypeEnum
+
+    @field_validator("token")
+    @classmethod
+    def token_val(cls, value: str):
+        token_pattern = re.compile(token_regexp)
+        if not re.match(token_pattern, value):
+            raise ValueError("Invalid token")
+        return value
+
+
+class KeyValuePair(BaseModel):
+    key: int | str
+    value: Optional[Any]

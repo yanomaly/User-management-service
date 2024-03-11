@@ -1,9 +1,9 @@
 import uvicorn
-from auth.router import auth_router
 from config import Settings
+from controllers.auth_routers import auth_router
+from controllers.health_router import health_check_router
+from controllers.user_routers import user_router, users_router
 from fastapi import FastAPI
-from router import health_check_router
-from users.router import user_router, users_router
 
 app = FastAPI()
 

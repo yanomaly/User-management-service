@@ -1,7 +1,6 @@
 import datetime
 import enum
 import uuid
-from dataclasses import dataclass
 
 import sqlalchemy as sa
 from database import Base
@@ -16,9 +15,8 @@ class Role(enum.Enum):
     ADMIN = "admin"
 
 
-@dataclass
 class Group(Base):
-    __tablename__ = "roles"
+    __tablename__ = "groups"
 
     id: uuid = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: str = sa.Column(sa.String, nullable=False)
@@ -26,7 +24,6 @@ class Group(Base):
     created_at: datetime = sa.Column(sa.DateTime)
 
 
-@dataclass
 class User(Base):
     __tablename__ = "users"
 
@@ -37,9 +34,9 @@ class User(Base):
     password = sa.Column(sa.String, nullable=False)
     phone_number: str = sa.Column(sa.String, unique=True)
     email: str = sa.Column(sa.String, unique=True)
-    role: Role = sa.Column(sa.Enum(Role))
+    role: Role = sa.Column(sa.Enum(Role), default=Role.USER)
     group = relationship("Group", back_populates="users")
-    group_id: uuid = sa.Column(sa.UUID, ForeignKey("roles.id"))
+    group_id: uuid = sa.Column(sa.UUID, ForeignKey("groups.id"))
     image: str = sa.Column(sa.String)
     is_blocked: bool = sa.Column(sa.Boolean, default=False)
     created_at: datetime = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
