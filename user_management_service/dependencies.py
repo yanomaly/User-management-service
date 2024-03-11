@@ -5,7 +5,7 @@ from config import Settings
 from database import session_factory
 from fastapi.security import HTTPBearer
 
-logging.config.fileConfig("../logger.ini")
+logging.config.fileConfig("./logger.ini")
 auth_logger = logging.getLogger("auth")
 
 settings = Settings()
