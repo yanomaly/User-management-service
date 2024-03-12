@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import List, Optional
 
+from dependencies import get_session
 from domain.user_schemas import UpdateForm
-from fastapi import HTTPException
-from repository.models.user_models import User
-from repository.queries.base import AbstractRepository, T
+from fastapi import Depends, HTTPException
+from models.user_models import User
+from repository.base import AbstractRepository, T
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 class UsersRepository(AbstractRepository[User]):
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession = Depends(get_session)) -> None:
         self.session = session
 
     async def insert(self, user: User) -> Optional[User]:
@@ -29,9 +30,10 @@ class UsersRepository(AbstractRepository[User]):
         try:
             query = select(User).where(getattr(User, identifier_type) == identifier)
             query_result = await self.session.execute(query)
+            user_to_return = query_result.scalars().first()
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-        return query_result.scalars().first()
+        return user_to_return
 
     async def update(self, user: User) -> Optional[User]:
         try:
@@ -44,7 +46,6 @@ class UsersRepository(AbstractRepository[User]):
                 .returning(User)
             )
             query_result = await self.session.execute(query)
-            await self.session.commit()
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
         return query_result.scalars().first()
@@ -53,7 +54,6 @@ class UsersRepository(AbstractRepository[User]):
         try:
             query = delete(User).where(User.id == user_id).returning(User)
             query_result = await self.session.execute(query)
-            await self.session.commit()
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
         return query_result.scalars().first()

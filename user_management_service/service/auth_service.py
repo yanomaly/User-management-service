@@ -1,17 +1,21 @@
 from typing import List, Optional
 
 from domain.auth_schemas import JwtTokenForm, KeyValuePair, LogInForm, SignUpForm
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
+from models.user_models import User
 from passlib.context import CryptContext
-from repository.models.user_models import User
-from repository.queries.auth_repository import AuthRepository
-from repository.queries.user_repository import UsersRepository
+from repository.auth_repository import AuthRepository
+from repository.user_repository import UsersRepository
 from service.tokens import decode_token, encode_tokens
 
 
 class AuthService:
-    def __init__(self, auth_repo: AuthRepository, user_repo: UsersRepository):
+    def __init__(
+        self,
+        auth_repo: AuthRepository = Depends(),
+        user_repo: UsersRepository = Depends(),
+    ):
         self.auth_repo = auth_repo
         self.user_repo = user_repo
 

@@ -1,17 +1,21 @@
 from domain.auth_schemas import JwtTokenForm
 from domain.base import Pagination
 from domain.user_schemas import UpdateForm, UserReturnForm
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
-from repository.models.user_models import User
-from repository.queries.auth_repository import AuthRepository
-from repository.queries.pagination import PaginationRepo
-from repository.queries.user_repository import UsersRepository
+from models.user_models import User
+from repository.auth_repository import AuthRepository
+from repository.pagination import PaginationRepo
+from repository.user_repository import UsersRepository
 from service.auth_service import AuthService
 
 
 class UserService:
-    def __init__(self, auth_repo: AuthRepository, user_repo: UsersRepository):
+    def __init__(
+        self,
+        auth_repo: AuthRepository = Depends(),
+        user_repo: UsersRepository = Depends(),
+    ):
         self.auth_repo = auth_repo
         self.user_repo = user_repo
 

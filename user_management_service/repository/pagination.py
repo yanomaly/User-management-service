@@ -1,11 +1,12 @@
+from dependencies import get_session
 from domain.base import OrderEnum, Pagination
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy import asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class PaginationRepo:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession = Depends(get_session)):
         self.session = session
 
     async def paginate(self, table, paginate_data: Pagination, filters: dict):

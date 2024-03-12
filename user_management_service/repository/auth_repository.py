@@ -1,14 +1,15 @@
 from typing import Any, List, Optional
 
+from dependencies import get_redis_client
 from domain.auth_schemas import KeyValuePair
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from redis import Redis
-from repository.queries.base import AbstractRepository, T
+from repository.base import AbstractRepository, T
 
 
 class AuthRepository(AbstractRepository[KeyValuePair]):
 
-    def __init__(self, redis: Redis) -> None:
+    def __init__(self, redis: Redis = Depends(get_redis_client)) -> None:
         self.redis = redis
 
     def insert(self, value: KeyValuePair) -> KeyValuePair:

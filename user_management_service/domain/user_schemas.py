@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from domain.base import UserBaseModel
-from repository.models.user_models import Role
+from models.user_models import Role
 
 
 class UpdateForm(UserBaseModel):
