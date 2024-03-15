@@ -1,7 +1,8 @@
-from dependencies import get_session
+from dependencies import base_logger, get_session
 from domain.base import OrderEnum, Pagination
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from sqlalchemy import asc, desc, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -26,7 +27,13 @@ class PaginationRepo:
                 .order_by(order)
                 .slice(page_start, page_start + paginate_data.per_page)
             )
+        except SQLAlchemyError as e:
+            base_logger.info(
+                f"Unknown SQLAlchemy error during pagination: {e}", exc_info=True
+            )
+            raise e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            base_logger.info(f"Unknown error during pagination: {e}", exc_info=True)
+            raise e
 
         return await self.session.scalars(query)

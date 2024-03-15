@@ -8,6 +8,7 @@ from passlib.context import CryptContext
 from repository.auth_repository import AuthRepository
 from repository.user_repository import UsersRepository
 from service.tokens import decode_token, encode_tokens
+from sqlalchemy.exc import IntegrityError
 
 
 class AuthService:
@@ -22,7 +23,10 @@ class AuthService:
     async def sign_up(self, form: SignUpForm) -> List[JwtTokenForm]:
         user_to_insert = User(**form.dict(exclude={"password_repeat"}))
         user_to_insert.password = self.hash_password(form.password.get_secret_value())
-        created_user = await self.user_repo.insert(user_to_insert)
+        try:
+            created_user = await self.user_repo.insert(user_to_insert)
+        except IntegrityError:
+            raise HTTPException(status_code=400, detail="User already exists")
         tokens = self.authenticate_user(form.password.get_secret_value(), created_user)
         return tokens
 

@@ -16,4 +16,6 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python3", "user_management_service/main.py"]
+WORKDIR /app/user_management_service
+
+CMD ["python3", "main.py"]

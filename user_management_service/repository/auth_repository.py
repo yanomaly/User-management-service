@@ -1,9 +1,9 @@
 from typing import Any, List, Optional
 
-from dependencies import get_redis_client
+from dependencies import auth_logger, get_redis_client
 from domain.auth_schemas import KeyValuePair
-from fastapi import Depends, HTTPException
-from redis import Redis
+from fastapi import Depends
+from redis import Redis, RedisError
 from repository.base import AbstractRepository, T
 
 
@@ -15,16 +15,25 @@ class AuthRepository(AbstractRepository[KeyValuePair]):
     def insert(self, value: KeyValuePair) -> KeyValuePair:
         try:
             self.redis.lpush(value.key, value.value.token)
+        except RedisError as e:
+            auth_logger.error(f"Redis error during insertion: {e}", exc_info=True)
+            raise e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            auth_logger.error(f"Unknown error during insertion: {e}", exc_info=True)
+            raise e
         return value
 
     def get_by_id(self, id: int | str) -> Optional[KeyValuePair]:
         try:
             user_tokens_blacklist = self.redis.lrange(id, 0, -1)
+            value_to_return = KeyValuePair(key=id, value=user_tokens_blacklist)
+        except RedisError as e:
+            auth_logger.error(f"Redis error during getting value: {e}", exc_info=True)
+            raise e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-        return KeyValuePair(key=id, value=user_tokens_blacklist)
+            auth_logger.error(f"Unknown error during getting value: {e}", exc_info=True)
+            raise e
+        return value_to_return
 
     async def get_by(self, identifier_name: str, identifier: Any) -> Optional[T]:
         pass
