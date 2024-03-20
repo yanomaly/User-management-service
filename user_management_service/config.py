@@ -23,4 +23,14 @@ class Settings(BaseSettings):
     APP_HOST: str
     APP_PORT: int
 
+    SERVICES: str
+    HOSTNAME: str
+    LOCALSTACK_PORT: int
+    HOSTNAME_EXTERNAL: str
+    DEFAULT_REGION: str
+    AWS_ACCESS_KEY_ID: str
+    AWS_SECRET_ACCESS_KEY: str
+    BUCKET_NAME: str
+    PRESIGNED_URL_EXPIRATION_SECONDS: int
+
     model_config = SettingsConfigDict(env_file=DOTENV)
