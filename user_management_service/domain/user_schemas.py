@@ -2,8 +2,8 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from schemas import UserBaseModel
-from users.model import Role
+from domain.base import UserBaseModel
+from models.user_models import Role
 
 
 class UpdateForm(UserBaseModel):
@@ -13,12 +13,12 @@ class UpdateForm(UserBaseModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
     role: Optional[Role] = None
-    group_id: Optional[str] = None
+    group_id: Optional[UUID] = None
     image: Optional[str] = None
     is_blocked: Optional[bool] = None
 
 
-class ReturnForm(UserBaseModel):
+class UserReturnForm(UserBaseModel):
     id: UUID
     role: Role
     group_id: Optional[UUID]

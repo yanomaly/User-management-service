@@ -14,7 +14,8 @@ COPY ../poetry.lock pyproject.toml /app/
 RUN poetry export --without-hashes --format requirements.txt --output requirements.txt
 RUN pip install -r requirements.txt
 
-COPY . /app/
+COPY . .
 
-RUN chmod +x entrypoint.sh
-ENTRYPOINT ["/app/entrypoint.sh"]
+WORKDIR /app/user_management_service
+
+CMD ["python3", "main.py"]
