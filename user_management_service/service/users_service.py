@@ -1,5 +1,6 @@
-from domain.auth_schemas import JwtTokenForm
-from domain.base import Pagination
+from dependencies import settings
+from domain.auth_schemas import ForgetForm, JwtTokenForm, ResetPassword
+from domain.base import Pagination, ReturnMessage
 from domain.user_schemas import UpdateForm, UserReturnForm
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
@@ -8,6 +9,7 @@ from repository.auth_repository import AuthRepository
 from repository.pagination import PaginationRepo
 from repository.user_repository import UsersRepository
 from service.auth_service import AuthService
+from service.tokens import decode_token, encode_reset_token
 
 
 class UserService:
@@ -105,6 +107,39 @@ class UserService:
             User, pagination, filters
         )
 
+    async def forget_password(self, data: ForgetForm) -> ReturnMessage:
+        user = await self.user_repo.get_by(data.identifier, data.identifier_type)
+        self.check_user(user)
+        reset_token = encode_reset_token(str(user.id))
+        reset_url = (
+            f"http://{settings.APP_HOST}:{settings.APP_PORT}/user/reset/{reset_token}"
+        )
+        # message to rabbit
+
+    async def reset_password(self, token: str, data: ResetPassword) -> ReturnMessage:
+        payload = decode_token(JwtTokenForm(token=token, type="reset"))
+        user_to_update = await self.user_repo.get_by_id(payload.get("iss"))
+        self.check_user(user_to_update)
+        if AuthService.verify_password(
+            data.password.get_secret_value(), user_to_update.password
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="New password should be different with old password",
+            )
+        user_to_update.password = AuthService.hash_password(
+            data.password.get_secret_value()
+        )
+        await self.user_repo.update(user_to_update)
+        return ReturnMessage(message="Password successfully updated")
+
+    @staticmethod
+    def check_user(user: User) -> None:
+        if not user:
+            raise HTTPException(status_code=404, detail="User doesn't exist")
+        elif user.is_blocked:
+            raise HTTPException(status_code=422, detail="User is blocked")
+
     @staticmethod
     def create_update_user(data: UpdateForm, user: User) -> User:
         for key, value in data.dict(exclude_unset=True).items():
@@ -112,19 +147,19 @@ class UserService:
         return user
 
     @staticmethod
-    def if_group_moderator(user: User, group_id: str):
+    def if_group_moderator(user: User, group_id: str) -> bool:
         return UserService.if_in_group(user, group_id) and UserService.if_moderator(
             user
         )
 
     @staticmethod
-    def if_in_group(user: User, group_id: str):
+    def if_in_group(user: User, group_id: str) -> bool:
         return user and group_id and user.group_id == group_id
 
     @staticmethod
-    def if_admin(user: User):
+    def if_admin(user: User) -> bool:
         return user and user.role.value == "admin"
 
     @staticmethod
-    def if_moderator(user: User):
+    def if_moderator(user: User) -> bool:
         return user and user.role.value == "moderator"

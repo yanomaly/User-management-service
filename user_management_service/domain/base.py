@@ -63,3 +63,7 @@ class Pagination(BaseModel):
     filter_value: Optional[Any] = None
     order: Optional[OrderEnum] = None
     order_by: Optional[str] = None
+
+
+class ReturnMessage(BaseModel):
+    message: str

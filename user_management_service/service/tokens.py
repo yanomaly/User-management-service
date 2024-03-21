@@ -9,23 +9,7 @@ from fastapi import HTTPException
 settings = Settings()
 
 
-def encode_token(user_id: str, token_type: str) -> JwtTokenForm:
-    payload = dict(iss=user_id, sub=token_type)
-    if token_type == "access":
-        payload.update(
-            {
-                "exp": datetime.utcnow()
-                + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRATION_MINUTES)
-            }
-        )
-    else:
-        payload.update(
-            {
-                "exp": datetime.utcnow()
-                + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRATION_MINUTES)
-            }
-        )
-
+def encode_token(payload: dict, token_type) -> JwtTokenForm:
     return JwtTokenForm(
         token=jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256"),
         type=token_type,
@@ -33,9 +17,37 @@ def encode_token(user_id: str, token_type: str) -> JwtTokenForm:
 
 
 def encode_tokens(user_id: str) -> List[JwtTokenForm]:
-    access_token = encode_token(user_id, "access")
-    refresh_token = encode_token(user_id, "refresh")
+    access_token = encode_token(
+        {
+            "sub": "access",
+            "iss": user_id,
+            "exp": datetime.utcnow()
+            + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRATION_MINUTES),
+        },
+        "access",
+    )
+    refresh_token = encode_token(
+        {
+            "sub": "refresh",
+            "iss": user_id,
+            "exp": datetime.utcnow()
+            + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRATION_MINUTES),
+        },
+        "refresh",
+    )
     return [access_token, refresh_token]
+
+
+def encode_reset_token(user_id: str) -> JwtTokenForm:
+    return encode_token(
+        {
+            "sub": "reset",
+            "iss": user_id,
+            "exp": datetime.utcnow()
+            + timedelta(minutes=settings.RESET_TOKEN_EXPIRATION_MINUTES),
+        },
+        "reset",
+    )
 
 
 def decode_token(token: JwtTokenForm) -> dict:

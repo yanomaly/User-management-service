@@ -2,7 +2,7 @@ version: '3'
 services:
 
   pg-db:
-    container_name: user-management-service-db
+    container_name: pg-db
     image: postgres:15.6-alpine3.18
     restart: on-failure
     env_file:
@@ -13,7 +13,7 @@ services:
       - "5432:5432"
 
   redis-db:
-    container_name: tokens-black-list-db
+    container_name: redis-db
     image: redis:7.2.0-alpine3.18
     restart: on-failure
     env_file:
@@ -23,6 +23,16 @@ services:
     ports:
       - "6379:6379"
 
+  rabbit-mq:
+    container_name: rabbit-mq
+    image: rabbitmq:3.12.10-management
+    restart: always
+    env_file:
+      - user_management_service/.env
+    ports:
+      - "15672:15672"
+
+
   app:
     build: .
     volumes:
@@ -30,6 +40,7 @@ services:
     depends_on:
       - pg-db
       - redis-db
+      - rabbit-mq
     ports:
       - "8000:8000"
 

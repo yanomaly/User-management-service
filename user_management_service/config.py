@@ -20,7 +20,11 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRATION_MINUTES: int
     REFRESH_TOKEN_EXPIRATION_MINUTES: int
+    RESET_TOKEN_EXPIRATION_MINUTES: int
     APP_HOST: str
     APP_PORT: int
+
+    RABBITMQ_DEFAULT_USER: str
+    RABBITMQ_DEFAULT_PASS: str
 
     model_config = SettingsConfigDict(env_file=DOTENV)
