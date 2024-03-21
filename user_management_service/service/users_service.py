@@ -1,10 +1,11 @@
+from dependencies import settings
 from domain.auth_schemas import JwtTokenForm
 from domain.base import Pagination
 from domain.user_schemas import UpdateForm, UserReturnForm
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials
 from models.user_models import User
-from repository.auth_repository import AuthRepository
+from repository.aws_repository import S3Repo
 from repository.pagination import PaginationRepo
 from repository.user_repository import UsersRepository
 from service.auth_service import AuthService
@@ -13,11 +14,13 @@ from service.auth_service import AuthService
 class UserService:
     def __init__(
         self,
-        auth_repo: AuthRepository = Depends(),
         user_repo: UsersRepository = Depends(),
+        auth_repo: AuthService = Depends(),
+        s3_repo: S3Repo = Depends(),
     ):
-        self.auth_repo = auth_repo
         self.user_repo = user_repo
+        self.auth_repo = auth_repo
+        self.s3_repo = s3_repo
 
     async def get_user_me(
         self, credentials: HTTPAuthorizationCredentials
@@ -26,6 +29,9 @@ class UserService:
             self.auth_repo, self.user_repo
         ).validate_connection(
             JwtTokenForm(token=credentials.credentials, type="access")
+        )
+        session_user.image = await self.s3_repo.create_presigned_url(
+            settings.BUCKET_NAME, session_user.image
         )
         return session_user
 
@@ -39,6 +45,27 @@ class UserService:
         )
         updated_user = await self.user_repo.update(
             self.create_update_user(data, session_user)
+        )
+        updated_user.image = await self.s3_repo.create_presigned_url(
+            settings.BUCKET_NAME, updated_user.image
+        )
+        return updated_user
+
+    async def upload_image_me(
+        self, credentials: HTTPAuthorizationCredentials, image: UploadFile
+    ) -> UserReturnForm:
+        session_user = await AuthService(
+            self.auth_repo, self.user_repo
+        ).validate_connection(
+            JwtTokenForm(token=credentials.credentials, type="access")
+        )
+        if not self.validate_image(image):
+            raise HTTPException(status_code=400, detail="This image does not supported")
+        await self.s3_repo.insert(image)
+        session_user.image = image.filename
+        updated_user = await self.user_repo.update(session_user)
+        updated_user.image = await self.s3_repo.create_presigned_url(
+            settings.BUCKET_NAME, updated_user.image
         )
         return updated_user
 
@@ -68,6 +95,9 @@ class UserService:
             raise HTTPException(
                 status_code=403, detail="You aren't moderator or admin of user's group"
             )
+        user_to_return.image = await self.s3_repo.create_presigned_url(
+            settings.BUCKET_NAME, user_to_return.image
+        )
         return user_to_return
 
     async def update_user_by_id(
@@ -84,6 +114,9 @@ class UserService:
         updated_user = await self.user_repo.update(
             self.create_update_user(data, user_to_update)
         )
+        updated_user.image = await self.s3_repo.create_presigned_url(
+            settings.BUCKET_NAME, updated_user.image
+        )
         return updated_user
 
     async def paginate_users(
@@ -94,16 +127,29 @@ class UserService:
         ).validate_connection(
             JwtTokenForm(token=credentials.credentials, type="access")
         )
-        if not self.if_admin(session_user) or not self.if_moderator(session_user):
+        if not self.if_admin(session_user) and not self.if_moderator(session_user):
             raise HTTPException(status_code=403, detail="You aren't admin or moderator")
         filters = {}
         if pagination.filter_by and pagination.filter_value:
             filters.update({pagination.filter_by: pagination.filter_value})
         if self.if_moderator(session_user):
             filters.update({"group_id": session_user.group_id})
-        return await PaginationRepo(self.user_repo.session).paginate(
+        users_page = await PaginationRepo(self.user_repo.session).paginate(
             User, pagination, filters
         )
+        for user in users_page:
+            user.image = await self.s3_repo.create_presigned_url(
+                settings.BUCKET_NAME, user.image
+            )
+        return users_page
+
+    @staticmethod
+    def validate_image(image: UploadFile) -> bool:
+        types = ["image/png", "image/jpeg", "image/jpg", "application/pdf"]
+        if image.content_type not in types or image.size > 1e7:
+            return False
+        else:
+            return True
 
     @staticmethod
     def create_update_user(data: UpdateForm, user: User) -> User:

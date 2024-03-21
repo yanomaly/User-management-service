@@ -36,4 +36,4 @@ class PaginationRepo:
             base_logger.info(f"Unknown error during pagination: {e}", exc_info=True)
             raise e
 
-        return await self.session.scalars(query)
+        return list(await self.session.scalars(query))
