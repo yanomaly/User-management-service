@@ -1,12 +1,15 @@
+from datetime import datetime
+
 from dependencies import settings
 from domain.auth_schemas import ForgetForm, JwtTokenForm, ResetPassword
-from domain.base import Pagination, ReturnMessage
+from domain.base import Pagination, RabbitMessageBody, ReturnMessage
 from domain.user_schemas import UpdateForm, UserReturnForm
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from models.user_models import User
 from repository.auth_repository import AuthRepository
 from repository.pagination import PaginationRepo
+from repository.rabbit_repo import RabbitRepository
 from repository.user_repository import UsersRepository
 from service.auth_service import AuthService
 from service.tokens import decode_token, encode_reset_token
@@ -17,9 +20,11 @@ class UserService:
         self,
         auth_repo: AuthRepository = Depends(),
         user_repo: UsersRepository = Depends(),
+        rabbit_repo: RabbitRepository = Depends(),
     ):
         self.auth_repo = auth_repo
         self.user_repo = user_repo
+        self.rabbit_repo = rabbit_repo
 
     async def get_user_me(
         self, credentials: HTTPAuthorizationCredentials
@@ -111,10 +116,15 @@ class UserService:
         user = await self.user_repo.get_by(data.identifier, data.identifier_type)
         self.check_user(user)
         reset_token = encode_reset_token(str(user.id))
-        reset_url = (
-            f"http://{settings.APP_HOST}:{settings.APP_PORT}/user/reset/{reset_token}"
+        reset_url = f"http://{settings.APP_HOST}:{settings.APP_PORT}/user/reset/{reset_token.token}"
+        self.rabbit_repo.send_message(
+            settings.ROUTING_KEY,
+            {"retries": 0},
+            RabbitMessageBody(
+                link=reset_url, email=user.email, publishing_time=datetime.utcnow()
+            ).model_dump_json(),
         )
-        # message to rabbit
+        return ReturnMessage(message="Please, check your email!")
 
     async def reset_password(self, token: str, data: ResetPassword) -> ReturnMessage:
         payload = decode_token(JwtTokenForm(token=token, type="reset"))

@@ -26,5 +26,8 @@ class Settings(BaseSettings):
 
     RABBITMQ_DEFAULT_USER: str
     RABBITMQ_DEFAULT_PASS: str
+    RABBIT_HOST: str
+    RABBIT_PORT: int
+    ROUTING_KEY: str
 
     model_config = SettingsConfigDict(env_file=DOTENV)

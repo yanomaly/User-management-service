@@ -26,10 +26,14 @@ services:
   rabbit-mq:
     container_name: rabbit-mq
     image: rabbitmq:3.12.10-management
-    restart: always
+    hostname: rabbit-mq
+    restart: on-failure
     env_file:
       - user_management_service/.env
+    volumes:
+      - rabbit-mq_data:/var/lib/rabbitmq
     ports:
+      - "5672:5672"
       - "15672:15672"
 
 
@@ -47,3 +51,4 @@ services:
 volumes:
   pg-db_data:
   redis-db_data:
+  rabbit-mq_data:

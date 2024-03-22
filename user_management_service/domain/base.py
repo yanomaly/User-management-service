@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
@@ -67,3 +68,9 @@ class Pagination(BaseModel):
 
 class ReturnMessage(BaseModel):
     message: str
+
+
+class RabbitMessageBody(BaseModel):
+    link: str
+    email: str
+    publishing_time: datetime
