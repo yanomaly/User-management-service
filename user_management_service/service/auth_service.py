@@ -26,7 +26,7 @@ class AuthService:
         try:
             created_user = await self.user_repo.insert(user_to_insert)
         except IntegrityError:
-            raise HTTPException(status_code=400, detail="User already exists")
+            raise HTTPException(status_code=422, detail="User already exists")
         tokens = self.authenticate_user(form.password.get_secret_value(), created_user)
         return tokens
 
@@ -70,9 +70,9 @@ class AuthService:
         if not user:
             raise HTTPException(status_code=404, detail="User doesn't exist")
         elif user.is_blocked:
-            raise HTTPException(status_code=400, detail="User is blocked")
+            raise HTTPException(status_code=422, detail="User is blocked")
         elif not self.verify_password(form_password, user.password):
-            raise HTTPException(status_code=400, detail="Invalid credentials")
+            raise HTTPException(status_code=422, detail="Invalid credentials")
         return encode_tokens(str(user.id))
 
     def check_if_blacklisted(self, user_id: str, token: JwtTokenForm) -> bool:

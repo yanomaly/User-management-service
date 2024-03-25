@@ -2,7 +2,7 @@ version: '3'
 services:
 
   pg-db:
-    container_name: user-management-service-db
+    container_name: pg-db
     image: postgres:15.6-alpine3.18
     restart: on-failure
     env_file:
@@ -13,7 +13,7 @@ services:
       - "5432:5432"
 
   redis-db:
-    container_name: tokens-black-list-db
+    container_name: redis-db
     image: redis:7.2.0-alpine3.18
     restart: on-failure
     env_file:
@@ -22,6 +22,19 @@ services:
       - redis-db_data:/data
     ports:
       - "6379:6379"
+
+  rabbit-mq:
+    container_name: rabbit-mq
+    image: rabbitmq:3.12.10-management
+    hostname: rabbit-mq
+    restart: on-failure
+    env_file:
+      - user_management_service/.env
+    volumes:
+      - rabbit-mq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
   localstack-service:
     container_name: localstack-service
@@ -41,7 +54,8 @@ services:
     - .:/app/
     depends_on:
       - pg-db
-      - redis-db
+      - redis-db  
+      - rabbit-mq
       - localstack-service
     ports:
       - "8000:8000"
@@ -49,3 +63,4 @@ services:
 volumes:
   pg-db_data:
   redis-db_data:
+  rabbit-mq_data:

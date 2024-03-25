@@ -1,6 +1,9 @@
+from typing import List
+
 from dependencies import base_logger, get_session
 from domain.base import OrderEnum, Pagination
 from fastapi import Depends
+from models.user_models import User
 from sqlalchemy import asc, desc, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +13,9 @@ class PaginationRepo:
     def __init__(self, session: AsyncSession = Depends(get_session)):
         self.session = session
 
-    async def paginate(self, table, paginate_data: Pagination, filters: dict):
+    async def paginate(
+        self, table, paginate_data: Pagination, filters: dict
+    ) -> List[User]:
         order = None
         try:
             if paginate_data.order and paginate_data.order_by:

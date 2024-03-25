@@ -20,8 +20,15 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRATION_MINUTES: int
     REFRESH_TOKEN_EXPIRATION_MINUTES: int
+    RESET_TOKEN_EXPIRATION_MINUTES: int
     APP_HOST: str
     APP_PORT: int
+      
+    RABBITMQ_DEFAULT_USER: str
+    RABBITMQ_DEFAULT_PASS: str
+    RABBIT_HOST: str
+    RABBIT_PORT: int
+    ROUTING_KEY: str
 
     SERVICES: str
     HOSTNAME: str

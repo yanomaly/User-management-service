@@ -1,5 +1,6 @@
 from dependencies import http_bearer
-from domain.base import Pagination
+from domain.auth_schemas import ForgetForm, ResetPassword
+from domain.base import Pagination, ReturnMessage
 from domain.user_schemas import UpdateForm, UserReturnForm
 from fastapi import APIRouter, Depends, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials
@@ -41,6 +42,23 @@ async def delete_user(
     user_service: UserService = Depends(),
 ):
     return await user_service.delete_user_me(credentials)
+
+
+@user_router.post("/me/forget", response_model=ReturnMessage, status_code=200)
+async def forget_pass(
+    data: ForgetForm,
+    user_service: UserService = Depends(),
+):
+    return await user_service.forget_password(data)
+
+
+@user_router.put("/reset/{token}", response_model=ReturnMessage, status_code=200)
+async def reset_pass(
+    data: ResetPassword,
+    token: str,
+    user_service: UserService = Depends(),
+):
+    return await user_service.reset_password(token, data)
 
 
 @user_router.get("/{user_id}", response_model=UserReturnForm, status_code=200)

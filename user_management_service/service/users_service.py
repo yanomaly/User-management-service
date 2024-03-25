@@ -1,26 +1,34 @@
+from datetime import datetime
+
 from dependencies import settings
-from domain.auth_schemas import JwtTokenForm
-from domain.base import Pagination
+from domain.auth_schemas import ForgetForm, JwtTokenForm, ResetPassword
+from domain.base import Pagination, RabbitMessageBody, ReturnMessage
+
 from domain.user_schemas import UpdateForm, UserReturnForm
 from fastapi import Depends, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials
 from models.user_models import User
 from repository.aws_repository import S3Repo
 from repository.pagination import PaginationRepo
+from repository.rabbit_repo import RabbitRepository
 from repository.user_repository import UsersRepository
 from service.auth_service import AuthService
+from service.tokens import decode_token, encode_reset_token
 
 
 class UserService:
     def __init__(
         self,
         user_repo: UsersRepository = Depends(),
+        rabbit_repo: RabbitRepository = Depends(),
         auth_repo: AuthService = Depends(),
         s3_repo: S3Repo = Depends(),
     ):
         self.user_repo = user_repo
+        self.rabbit_repo = rabbit_repo
         self.auth_repo = auth_repo
         self.s3_repo = s3_repo
+        
 
     async def get_user_me(
         self, credentials: HTTPAuthorizationCredentials
@@ -151,6 +159,44 @@ class UserService:
         else:
             return True
 
+    async def forget_password(self, data: ForgetForm) -> ReturnMessage:
+        user = await self.user_repo.get_by(data.identifier, data.identifier_type)
+        self.check_user(user)
+        reset_token = encode_reset_token(str(user.id))
+        reset_url = f"http://{settings.APP_HOST}:{settings.APP_PORT}/user/reset/{reset_token.token}"
+        self.rabbit_repo.send_message(
+            settings.ROUTING_KEY,
+            {"retries": 0},
+            RabbitMessageBody(
+                link=reset_url, email=user.email, publishing_time=datetime.utcnow()
+            ).model_dump_json(),
+        )
+        return ReturnMessage(message="Please, check your email!")
+
+    async def reset_password(self, token: str, data: ResetPassword) -> ReturnMessage:
+        payload = decode_token(JwtTokenForm(token=token, type="reset"))
+        user_to_update = await self.user_repo.get_by_id(payload.get("iss"))
+        self.check_user(user_to_update)
+        if AuthService.verify_password(
+            data.password.get_secret_value(), user_to_update.password
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="New password should be different with old password",
+            )
+        user_to_update.password = AuthService.hash_password(
+            data.password.get_secret_value()
+        )
+        await self.user_repo.update(user_to_update)
+        return ReturnMessage(message="Password successfully updated")
+
+    @staticmethod
+    def check_user(user: User) -> None:
+        if not user:
+            raise HTTPException(status_code=404, detail="User doesn't exist")
+        elif user.is_blocked:
+            raise HTTPException(status_code=422, detail="User is blocked")
+
     @staticmethod
     def create_update_user(data: UpdateForm, user: User) -> User:
         for key, value in data.dict(exclude_unset=True).items():
@@ -158,19 +204,19 @@ class UserService:
         return user
 
     @staticmethod
-    def if_group_moderator(user: User, group_id: str):
+    def if_group_moderator(user: User, group_id: str) -> bool:
         return UserService.if_in_group(user, group_id) and UserService.if_moderator(
             user
         )
 
     @staticmethod
-    def if_in_group(user: User, group_id: str):
+    def if_in_group(user: User, group_id: str) -> bool:
         return user and group_id and user.group_id == group_id
 
     @staticmethod
-    def if_admin(user: User):
+    def if_admin(user: User) -> bool:
         return user and user.role.value == "admin"
 
     @staticmethod
-    def if_moderator(user: User):
+    def if_moderator(user: User) -> bool:
         return user and user.role.value == "moderator"
