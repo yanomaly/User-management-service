@@ -23,11 +23,21 @@ class Settings(BaseSettings):
     RESET_TOKEN_EXPIRATION_MINUTES: int
     APP_HOST: str
     APP_PORT: int
-
+      
     RABBITMQ_DEFAULT_USER: str
     RABBITMQ_DEFAULT_PASS: str
     RABBIT_HOST: str
     RABBIT_PORT: int
     ROUTING_KEY: str
+
+    SERVICES: str
+    HOSTNAME: str
+    LOCALSTACK_PORT: int
+    HOSTNAME_EXTERNAL: str
+    DEFAULT_REGION: str
+    AWS_ACCESS_KEY_ID: str
+    AWS_SECRET_ACCESS_KEY: str
+    BUCKET_NAME: str
+    PRESIGNED_URL_EXPIRATION_SECONDS: int
 
     model_config = SettingsConfigDict(env_file=DOTENV)

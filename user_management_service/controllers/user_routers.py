@@ -2,7 +2,7 @@ from dependencies import http_bearer
 from domain.auth_schemas import ForgetForm, ResetPassword
 from domain.base import Pagination, ReturnMessage
 from domain.user_schemas import UpdateForm, UserReturnForm
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials
 from service.users_service import UserService
 
@@ -25,6 +25,15 @@ async def update_user(
     user_service: UserService = Depends(),
 ):
     return await user_service.update_user_me(credentials, data)
+
+
+@user_router.patch("/me/image", response_model=UserReturnForm, status_code=200)
+async def upload_image(
+    image: UploadFile,
+    credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
+    user_service: UserService = Depends(),
+):
+    return await user_service.upload_image_me(credentials, image)
 
 
 @user_router.delete("/me", response_model=UserReturnForm, status_code=200)

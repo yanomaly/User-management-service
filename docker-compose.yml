@@ -36,6 +36,17 @@ services:
       - "5672:5672"
       - "15672:15672"
 
+  localstack-service:
+    container_name: localstack-service
+    image: localstack/localstack:3.1
+    restart: on-failure
+    env_file:
+      - user_management_service/.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./localstack_entry.sh:/etc/localstack/init/ready.d/script.sh
+    ports:
+      - "4566:4566"
 
   app:
     build: .
@@ -43,8 +54,9 @@ services:
     - .:/app/
     depends_on:
       - pg-db
-      - redis-db
+      - redis-db  
       - rabbit-mq
+      - localstack-service
     ports:
       - "8000:8000"
 

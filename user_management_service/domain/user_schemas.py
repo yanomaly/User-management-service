@@ -14,15 +14,14 @@ class UpdateForm(UserBaseModel):
     phone_number: Optional[str] = None
     role: Optional[Role] = None
     group_id: Optional[UUID] = None
-    image: Optional[str] = None
     is_blocked: Optional[bool] = None
 
 
 class UserReturnForm(UserBaseModel):
-    id: UUID
-    role: Role
+    id: Optional[UUID]
+    role: Optional[Role]
     group_id: Optional[UUID]
     image: Optional[str]
-    is_blocked: bool
+    is_blocked: Optional[bool]
     created_at: datetime
     modified_at: datetime
