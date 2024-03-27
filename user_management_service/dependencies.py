@@ -1,15 +1,17 @@
-import logging
+import logging.config
 
 import aioboto3
 import redis
+from botocore.client import BaseClient
 from config import Settings
 from database import session_factory
 from fastapi.security import HTTPBearer
 from pika.adapters.blocking_connection import BlockingConnection
-from pika.channel import Channel
 from pika.connection import ConnectionParameters
 from pika.credentials import PlainCredentials
 from pika.exceptions import AMQPError
+from redis import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logging.config.fileConfig("../logger.ini")
 auth_logger = logging.getLogger("auth")
@@ -27,16 +29,16 @@ redis_client = redis.Redis(
 aws_session = aioboto3.Session()
 
 
-def get_redis_client():
+def get_redis_client() -> Redis:
     return redis_client
 
 
-async def get_session():
+async def get_session() -> AsyncSession:
     async with session_factory() as session:
         yield session
 
-        
-async def get_s3_client():
+
+async def get_s3_client() -> BaseClient:
     async with aws_session.client(
         service_name="s3",
         region_name=settings.DEFAULT_REGION,
@@ -44,9 +46,9 @@ async def get_s3_client():
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         endpoint_url=f"http://{settings.HOSTNAME_EXTERNAL}:{settings.LOCALSTACK_PORT}",
     ) as client:
-        yield client        
-        
-        
+        yield client
+
+
 class RabbitMQClient:
     def __init__(self):
         self.connection = self.create_connection()
@@ -57,7 +59,9 @@ class RabbitMQClient:
             settings.RABBITMQ_DEFAULT_USER, settings.RABBITMQ_DEFAULT_PASS
         )
         parameters = ConnectionParameters(
-            host=settings.RABBIT_HOST, credentials=credentials
+            host=settings.RABBIT_HOST,
+            port=settings.RABBIT_PORT,
+            credentials=credentials,
         )
         try:
             connection = BlockingConnection(parameters)
@@ -69,12 +73,7 @@ class RabbitMQClient:
             raise e
         return connection
 
-    def get_channel(self) -> Channel:
+    def get_connection(self) -> BlockingConnection:
         if self.connection is None or self.connection.is_closed:
             self.connection = self.create_connection()
-        with self.connection.channel() as channel:
-            yield channel
-
-
-rabbit_client = RabbitMQClient()
-
+        return self.connection

@@ -21,7 +21,7 @@ class Group(Base):
     id: uuid = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: str = sa.Column(sa.String, nullable=False)
     users = relationship("User", back_populates="group")
-    created_at: datetime = sa.Column(sa.DateTime)
+    created_at: datetime = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
 
 
 class User(Base):
