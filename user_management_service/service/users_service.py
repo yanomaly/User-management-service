@@ -3,7 +3,6 @@ from datetime import datetime
 from dependencies import settings
 from domain.auth_schemas import ForgetForm, JwtTokenForm, ResetPassword
 from domain.base import Pagination, RabbitMessageBody, ReturnMessage
-
 from domain.user_schemas import UpdateForm, UserReturnForm
 from fastapi import Depends, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials
@@ -14,6 +13,7 @@ from repository.rabbit_repo import RabbitRepository
 from repository.user_repository import UsersRepository
 from service.auth_service import AuthService
 from service.tokens import decode_token, encode_reset_token
+from sqlalchemy.exc import IntegrityError
 
 
 class UserService:
@@ -28,7 +28,6 @@ class UserService:
         self.rabbit_repo = rabbit_repo
         self.auth_repo = auth_repo
         self.s3_repo = s3_repo
-        
 
     async def get_user_me(
         self, credentials: HTTPAuthorizationCredentials
@@ -51,9 +50,14 @@ class UserService:
         ).validate_connection(
             JwtTokenForm(token=credentials.credentials, type="access")
         )
-        updated_user = await self.user_repo.update(
-            self.create_update_user(data, session_user)
-        )
+        try:
+            updated_user = await self.user_repo.update(
+                self.create_update_user(data, session_user)
+            )
+        except IntegrityError:
+            raise HTTPException(
+                status_code=422, detail="User with this identifiers already exists"
+            )
         updated_user.image = await self.s3_repo.create_presigned_url(
             settings.BUCKET_NAME, updated_user.image
         )
