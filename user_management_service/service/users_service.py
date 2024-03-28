@@ -101,9 +101,11 @@ class UserService:
             JwtTokenForm(token=credentials.credentials, type="access")
         )
         user_to_return = await self.user_repo.get_by_id(user_id)
+        if not user_to_return:
+            raise HTTPException(status_code=404, detail="User doesn't exist")
         if not UserService.if_group_moderator(
             session_user, str(user_to_return.group_id)
-        ) or UserService.if_moderator(session_user):
+        ) and not UserService.if_admin(session_user):
             raise HTTPException(
                 status_code=403, detail="You aren't moderator or admin of user's group"
             )
@@ -215,7 +217,7 @@ class UserService:
 
     @staticmethod
     def if_in_group(user: User, group_id: str) -> bool:
-        return user and group_id and user.group_id == group_id
+        return user and group_id and str(user.group_id) == group_id
 
     @staticmethod
     def if_admin(user: User) -> bool:
