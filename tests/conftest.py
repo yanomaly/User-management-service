@@ -118,22 +118,7 @@ app.dependency_overrides[http_bearer] = override_http_bearer
 app.dependency_overrides[RabbitMQClient] = OverrideRabbitMQClient
 
 
-@pytest.fixture(scope="session")
-def validation_id() -> str:
-    return "1276bb90-9923-4658-85e7-b708c93dd23b"
-
-
-@pytest.fixture(autouse=True, scope="session")
-async def prepare_database(validation_id) -> None:
-    async with engine_test.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    await fill_db(validation_id)
-    yield
-    async with engine_test.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-
-async def fill_db(validation_id) -> None:
+async def fill_db(validation_id, id_to_delete) -> None:
     async with session_factory_test() as session:
         group = Group(name="test")
         admin = User(
@@ -173,13 +158,49 @@ async def fill_db(validation_id) -> None:
             is_blocked=True,
             group=group,
         )
-        session.add_all([group, admin, moderator, blocked])
+        to_delete = User(
+            id=id_to_delete,
+            name="Del",
+            surname="Del",
+            username="deleted",
+            password=CryptContext(schemes=["bcrypt"], deprecated="auto").hash(
+                "Test19Test_"
+            ),
+            email="del@gmail.com",
+            phone_number="+375293214455",
+        )
+        session.add_all([group, admin, moderator, blocked, to_delete])
         await session.commit()
+
+
+@pytest.fixture(scope="session")
+def validation_id() -> str:
+    return "1276bb90-9923-4658-85e7-b708c93dd23b"
+
+
+@pytest.fixture(scope="session")
+def id_to_delete() -> str:
+    return "1276bb90-9110-4658-85e7-b708c93dd23b"
+
+
+@pytest.fixture(autouse=True, scope="session")
+async def prepare_database(validation_id, id_to_delete) -> None:
+    async with engine_test.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    await fill_db(validation_id, id_to_delete)
+    yield
+    async with engine_test.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture(scope="session")
 async def valid_tokens(validation_id) -> list[JwtTokenForm]:
     return encode_tokens(validation_id)
+
+
+@pytest.fixture(scope="session")
+async def delete_tokens(id_to_delete) -> list[JwtTokenForm]:
+    return encode_tokens(id_to_delete)
 
 
 @pytest.fixture(scope="session")
