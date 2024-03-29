@@ -78,7 +78,6 @@ celerybeat-schedule
 
 # dotenv
 user_management_service/.env
-user_management_service/.test.env
 
 # virtualenv
 venv/

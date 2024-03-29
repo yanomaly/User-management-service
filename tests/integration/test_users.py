@@ -1,5 +1,5 @@
 import pytest
-from conftest import session_factory_test
+from tests.conftest import session_factory_test
 from domain.auth_schemas import JwtTokenForm
 from httpx import AsyncClient
 from models.user_models import User
