@@ -1,0 +1,43 @@
+version: '3'
+services:
+
+  pg-db-test:
+    container_name: pg-db-test
+    image: postgres:15.6-alpine3.18
+    restart: on-failure
+    env_file:
+      - user_management_service/.test.env
+    ports:
+      - "1911:5432"
+
+  redis-db-test:
+    container_name: redis-db-test
+    image: redis:7.2.0-alpine3.18
+    restart: on-failure
+    env_file:
+      - user_management_service/.test.env
+    ports:
+      - "2911:6379"
+
+  rabbit-mq-test:
+    container_name: rabbit-mq-test
+    image: rabbitmq:3.12.10-management
+    hostname: rabbit-mq-test
+    restart: on-failure
+    env_file:
+      - user_management_service/.test.env
+    ports:
+      - "5911:5672"
+      - "19911:15672"
+
+  localstack-service-test:
+    container_name: localstack-service-test
+    image: localstack/localstack:3.1
+    restart: on-failure
+    env_file:
+      - user_management_service/.test.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./localstack_entry.sh:/etc/localstack/init/ready.d/script.sh
+    ports:
+      - "4911:4566"

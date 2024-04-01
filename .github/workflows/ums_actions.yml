@@ -1,0 +1,113 @@
+name: ums
+on: [push, pull_request]
+
+jobs:
+
+  lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Installing python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.11
+
+      - name: Installing and applying black
+        run: |
+          pip install black
+          black . --check
+
+      - name: Installing and applying isort
+        run: |
+          pip install isort
+          isort . --recursive
+
+      - name: Commit isort changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A && git diff-index --cached --quiet HEAD || git commit -m 'isort'
+
+      - name: Installing and applying flake8
+        run: |
+          pip install flake8
+          flake8 --ignore E402,E501,E704,F401,W503
+
+  tests:
+    runs-on: ubuntu-22.04
+
+    services:
+
+      postgres:
+        image: postgres:15.6-alpine3.18
+        env:
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+        ports:
+          - 1911:5432
+
+      redis:
+        image: redis:7.2.0-alpine3.18
+        env:
+          REDIS_USER: ${{ secrets.REDIS_USER }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST }}
+        ports:
+          - 2911:6379
+
+      localstack:
+        image: localstack/localstack:3.1
+        env:
+          SERVICES: ${{ secrets.SERVICES }}
+          HOSTNAME: ${{ secrets.HOSTNAME }}
+          HOSTNAME_EXTERNAL: ${{ secrets.HOSTNAME_EXTERNAL }}
+          DEFAULT_REGION: ${{ secrets.DEFAULT_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        ports:
+          - 4911:4566
+
+      rabbit:
+        image: rabbitmq:3.12.10
+        env:
+          RABBITMQ_DEFAULT_USER: ${{ secrets.RABBITMQ_DEFAULT_USER }}
+          RABBITMQ_DEFAULT_PASS: ${{ secrets.RABBITMQ_DEFAULT_PASS }}
+          RABBIT_HOST: ${{ secrets.RABBIT_HOST }}
+        ports:
+          - 5911:5672
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Installing python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.11
+
+      - name: Installing dependencies
+        run: |
+          pip install poetry
+          poetry export --without-hashes --format requirements.txt --output requirements.txt
+          pip install -r requirements.txt
+          mkdir -p /home/runner/work/User-management-service/User-management-service/user_management_service/logs
+          cd /home/runner/work/User-management-service/User-management-service/user_management_service/logs
+          touch auth_logs.log
+          touch base_logs.log
+          touch users_logs.log
+
+      - name: Applying tests
+        run: pytest -s -v --disable-warnings --cov=user_management_service --cov-report=xml
+
+      - name: Checking code coverage
+        uses: insightsengineering/coverage-action@v2
+        with:
+          path: coverage.xml
+          threshold: 70
+          fail: true
+          publish: true
+          diff: true
+          diff-branch: main
+          diff-storage: _xml_coverage_reports
+          coverage-summary-title: "Code coverage summary"

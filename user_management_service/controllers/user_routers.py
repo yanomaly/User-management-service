@@ -77,7 +77,7 @@ async def update_user_by_id(
     credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
     user_service: UserService = Depends(),
 ):
-    return user_service.update_user_by_id(credentials, user_id, data)
+    return await user_service.update_user_by_id(credentials, user_id, data)
 
 
 @users_router.get("/", response_model=list[UserReturnForm], status_code=200)

@@ -9,6 +9,8 @@ services:
       - user_management_service/.env
     volumes:
       - pg-db_data:/var/lib/postgresql/data/
+    networks:
+      - internship
     ports:
       - "5432:5432"
 
@@ -20,6 +22,8 @@ services:
       - user_management_service/.env
     volumes:
       - redis-db_data:/data
+    networks:
+      - internship
     ports:
       - "6379:6379"
 
@@ -32,6 +36,8 @@ services:
       - user_management_service/.env
     volumes:
       - rabbit-mq_data:/var/lib/rabbitmq
+    networks:
+      - internship
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -45,6 +51,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./localstack_entry.sh:/etc/localstack/init/ready.d/script.sh
+    networks:
+      - internship
     ports:
       - "4566:4566"
 
@@ -54,9 +62,11 @@ services:
     - .:/app/
     depends_on:
       - pg-db
-      - redis-db  
+      - redis-db
       - rabbit-mq
       - localstack-service
+    networks:
+      - internship
     ports:
       - "8000:8000"
 
@@ -64,3 +74,7 @@ volumes:
   pg-db_data:
   redis-db_data:
   rabbit-mq_data:
+
+networks:
+  internship:
+    driver: bridge

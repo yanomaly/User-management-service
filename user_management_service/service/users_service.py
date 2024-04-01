@@ -3,7 +3,6 @@ from datetime import datetime
 from dependencies import settings
 from domain.auth_schemas import ForgetForm, JwtTokenForm, ResetPassword
 from domain.base import Pagination, RabbitMessageBody, ReturnMessage
-
 from domain.user_schemas import UpdateForm, UserReturnForm
 from fastapi import Depends, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials
@@ -14,6 +13,7 @@ from repository.rabbit_repo import RabbitRepository
 from repository.user_repository import UsersRepository
 from service.auth_service import AuthService
 from service.tokens import decode_token, encode_reset_token
+from sqlalchemy.exc import IntegrityError
 
 
 class UserService:
@@ -28,7 +28,6 @@ class UserService:
         self.rabbit_repo = rabbit_repo
         self.auth_repo = auth_repo
         self.s3_repo = s3_repo
-        
 
     async def get_user_me(
         self, credentials: HTTPAuthorizationCredentials
@@ -51,9 +50,14 @@ class UserService:
         ).validate_connection(
             JwtTokenForm(token=credentials.credentials, type="access")
         )
-        updated_user = await self.user_repo.update(
-            self.create_update_user(data, session_user)
-        )
+        try:
+            updated_user = await self.user_repo.update(
+                self.create_update_user(data, session_user)
+            )
+        except IntegrityError:
+            raise HTTPException(
+                status_code=422, detail="User with this identifiers already exists"
+            )
         updated_user.image = await self.s3_repo.create_presigned_url(
             settings.BUCKET_NAME, updated_user.image
         )
@@ -97,9 +101,11 @@ class UserService:
             JwtTokenForm(token=credentials.credentials, type="access")
         )
         user_to_return = await self.user_repo.get_by_id(user_id)
+        if not user_to_return:
+            raise HTTPException(status_code=404, detail="User doesn't exist")
         if not UserService.if_group_moderator(
             session_user, str(user_to_return.group_id)
-        ) or UserService.if_moderator(session_user):
+        ) and not UserService.if_admin(session_user):
             raise HTTPException(
                 status_code=403, detail="You aren't moderator or admin of user's group"
             )
@@ -163,10 +169,9 @@ class UserService:
         user = await self.user_repo.get_by(data.identifier, data.identifier_type)
         self.check_user(user)
         reset_token = encode_reset_token(str(user.id))
-        reset_url = f"http://{settings.APP_HOST}:{settings.APP_PORT}/user/reset/{reset_token.token}"
+        reset_url = f"http://{settings.APP_HOST}:{settings.APP_PORT}/ums/user/reset/{reset_token.token}"
         self.rabbit_repo.send_message(
             settings.ROUTING_KEY,
-            {"retries": 0},
             RabbitMessageBody(
                 link=reset_url, email=user.email, publishing_time=datetime.utcnow()
             ).model_dump_json(),
@@ -211,7 +216,7 @@ class UserService:
 
     @staticmethod
     def if_in_group(user: User, group_id: str) -> bool:
-        return user and group_id and user.group_id == group_id
+        return user and group_id and str(user.group_id) == group_id
 
     @staticmethod
     def if_admin(user: User) -> bool:

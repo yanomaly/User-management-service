@@ -5,7 +5,7 @@ from controllers.health_router import health_check_router
 from controllers.user_routers import user_router, users_router
 from fastapi import FastAPI
 
-app = FastAPI()
+app = FastAPI(root_path="/ums")
 
 app.include_router(health_check_router)
 app.include_router(auth_router)
