@@ -1,14 +1,18 @@
 from typing import List, Optional
 
+from config import Settings
 from domain.auth_schemas import JwtTokenForm, KeyValuePair, LogInForm, SignUpForm
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials
+from fastapi import Cookie, Depends, HTTPException
+from fastapi.encoders import jsonable_encoder
 from models.user_models import User
 from passlib.context import CryptContext
 from repository.auth_repository import AuthRepository
 from repository.user_repository import UsersRepository
 from service.tokens import decode_token, encode_tokens
 from sqlalchemy.exc import IntegrityError
+from starlette.responses import JSONResponse
+
+settings = Settings()
 
 
 class AuthService:
@@ -20,7 +24,7 @@ class AuthService:
         self.auth_repo = auth_repo
         self.user_repo = user_repo
 
-    async def sign_up(self, form: SignUpForm) -> List[JwtTokenForm]:
+    async def sign_up(self, form: SignUpForm) -> JSONResponse:
         user_to_insert = User(**form.dict(exclude={"password_repeat"}))
         user_to_insert.password = self.hash_password(form.password.get_secret_value())
         try:
@@ -28,22 +32,22 @@ class AuthService:
         except IntegrityError:
             raise HTTPException(status_code=422, detail="User already exists")
         tokens = self.authenticate_user(form.password.get_secret_value(), created_user)
-        return tokens
+        return self.generate_tokens_response(tokens)
 
-    async def login(self, form: LogInForm) -> List[JwtTokenForm]:
+    async def login(self, form: LogInForm) -> JSONResponse:
         logining_user = await self.user_repo.get_by(
             form.identifier, form.identifier_type
         )
         tokens = self.authenticate_user(form.password.get_secret_value(), logining_user)
-        return tokens
+        return self.generate_tokens_response(tokens)
 
-    async def refresh_tokens(
-        self, credentials: HTTPAuthorizationCredentials
-    ) -> List[JwtTokenForm]:
-        token = JwtTokenForm(token=credentials.credentials, type="refresh")
+    async def refresh_tokens(self, refresh: Cookie) -> JSONResponse:
+        if not refresh:
+            raise HTTPException(status_code=422, detail="Refresh token required")
+        token = JwtTokenForm(token=refresh, type="refresh")
         user = await self.validate_connection(token)
         tokens = self.generate_new_tokens(token, user)
-        return tokens
+        return self.generate_tokens_response(tokens)
 
     def generate_new_tokens(
         self, token: JwtTokenForm, user: Optional[User]
@@ -68,7 +72,7 @@ class AuthService:
         self, form_password: str, user: Optional[User]
     ) -> List[JwtTokenForm]:
         if not user:
-            raise HTTPException(status_code=404, detail="User doesn't exist")
+            raise HTTPException(status_code=422, detail="User doesn't exist")
         elif user.is_blocked:
             raise HTTPException(status_code=422, detail="User is blocked")
         elif not self.verify_password(form_password, user.password):
@@ -78,6 +82,20 @@ class AuthService:
     def check_if_blacklisted(self, user_id: str, token: JwtTokenForm) -> bool:
         user_tokens_blacklist = self.auth_repo.get_by_id(user_id)
         return token.token in user_tokens_blacklist.value
+
+    @staticmethod
+    def generate_tokens_response(tokens: List[JwtTokenForm]) -> JSONResponse:
+        access_token = jsonable_encoder(tokens[0])
+        response = JSONResponse(content=access_token, status_code=200)
+        response.set_cookie(
+            key="refresh",
+            value=tokens[1].token,
+            max_age=settings.REFRESH_TOKEN_EXPIRATION_MINUTES * 60,
+            httponly=True,
+            secure=True,
+            samesite="strict",
+        )
+        return response
 
     @staticmethod
     def hash_password(password: str) -> str:
