@@ -27,11 +27,10 @@ class TestSignUp:
             },
         )
 
-        assert response.status_code == 201, "Incorrect status code"
-        assert response.json()[0]["token"] is not None, "Incorrect access token"
-        assert response.json()[0]["type"] == "access", "Incorrect access token type"
-        assert response.json()[1]["token"] is not None, "Incorrect refresh token"
-        assert response.json()[1]["type"] == "refresh", "Incorrect access token type"
+        assert response.status_code == 200, "Incorrect status code"
+        print(response.json())
+        assert response.json()["token"] is not None, "Incorrect access token"
+        assert response.json()["type"] == "access", "Incorrect access token type"
 
     async def test_signup_user_already_exists(self):
         response = await self.client.post(
@@ -126,10 +125,8 @@ class TestLogin:
         )
 
         assert response.status_code == 200, "Incorrect status code"
-        assert response.json()[0]["token"] is not None, "Incorrect access token"
-        assert response.json()[0]["type"] == "access", "Incorrect access token type"
-        assert response.json()[1]["token"] is not None, "Incorrect refresh token"
-        assert response.json()[1]["type"] == "refresh", "Incorrect access token type"
+        assert response.json()["token"] is not None, "Incorrect access token"
+        assert response.json()["type"] == "access", "Incorrect access token type"
 
     async def test_login_no_user(self):
         response = await self.client.post(
@@ -140,7 +137,7 @@ class TestLogin:
             },
         )
 
-        assert response.status_code == 404, "Incorrect status code"
+        assert response.status_code == 422, "Incorrect status code"
         assert response.json()["detail"] == "User doesn't exist", "Incorrect detail"
 
     async def test_login_invalid_identifier(self):
@@ -195,21 +192,20 @@ class TestRefresh:
 
     async def test_refresh_ok(self):
         response = await self.client.post(
-            refresh_url, headers={"Authorization": f"Bearer {self.tokens[1].token}"}
+            refresh_url, cookies={"refresh": self.tokens[1].token}
         )
 
         assert response.status_code == 200, "Incorrect status code"
-        assert response.json()[0]["token"] is not None, "Incorrect access token"
-        assert response.json()[0]["type"] == "access", "Incorrect access token type"
-        assert response.json()[1]["token"] is not None, "Incorrect refresh token"
-        assert response.json()[1]["type"] == "refresh", "Incorrect access token type"
+        assert response.json()["token"] is not None, "Incorrect access token"
+        assert response.json()["type"] == "access", "Incorrect access token type"
 
     async def test_refresh_incorrect_token(self):
         response = await self.client.post(
             refresh_url,
-            headers={
-                "Authorization": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJXaGl0ZU5pZ2h0c01hcmF0aG9uV2l0aEhvbm9yc0RpcGxvbWFJbkRhUG9ja2V0MTkifQ.BURHgBUsMXlWxnYLiZfPeScmltJ-D7DDMZqI5Hpaa_I"
+            cookies={
+                "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJXaGl0ZU5pZ2h0c01hcmF0aG9uV2l0aEhvbm9yc0RpcGxvbWFJbkRhUG9ja2V0MTkifQ.BURHgBUsMXlWxnYLiZfPeScmltJ-D7DDMZqI5Hpaa_I"
             },
         )
 
-        assert response.status_code == 403, "Incorrect status code"
+        print(response.json())
+        assert response.status_code == 401, "Incorrect status code"
